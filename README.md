@@ -223,6 +223,15 @@ rotating Scrum Master role.
 
 ## License
 
-MIT — see `LICENSE`. Course data scraped from AUBsis is the property of
-the American University of Beirut and is used here only to power the
-student-facing planner.
+**PolyForm Noncommercial 1.0.0** — see [`LICENSE`](./LICENSE).
+
+You are free to view, fork, modify, and use UniFlow for personal,
+educational, and other non-commercial purposes. **Commercial use —
+including selling, monetizing, or building paid products on top of this
+code — is not permitted under this license.** If you're interested in
+commercial licensing or partnership, please reach out via my
+[GitHub profile](https://github.com/Jamil-M03).
+
+Course data scraped from AUBsis is the property of the American
+University of Beirut and is used here only to power the student-facing
+planner.
