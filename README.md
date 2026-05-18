@@ -235,3 +235,7 @@ commercial licensing or partnership, please reach out via my
 Course data scraped from AUBsis is the property of the American
 University of Beirut and is used here only to power the student-facing
 planner.
+
+---
+
+© 2026 Jamil M. and contributors. Licensed under PolyForm Noncommercial 1.0.0.
