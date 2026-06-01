@@ -24,6 +24,7 @@ function CustomSignIn({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [pendingFactor, setPendingFactor] = useState<SignInFactorState | null>(null);
+  const [resetMode, setResetMode] = useState<null | "request" | "reset">(null);
 
   const finishSignIn = async (sessionId: string | null) => {
     if (sessionId) {
@@ -158,6 +159,98 @@ function CustomSignIn({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
     }
   };
 
+  // ── Forgot-password flow (Clerk reset_password_email_code) ──────────────
+  // NOTE: this requires the "Email verification code" password-reset method to
+  // be enabled in the Clerk Dashboard (Configure → Email, phone, username →
+  // Password). It is enabled by default.
+  const startForgotPassword = () => {
+    setError("");
+    setCode("");
+    setPassword("");
+    setResetMode("request");
+  };
+
+  const exitForgotPassword = () => {
+    setError("");
+    setCode("");
+    setPassword("");
+    setResetMode(null);
+  };
+
+  // Step 1: ask Clerk to email a reset code to the account.
+  const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isAllowedUniFlowEmail(normalizedEmail)) {
+      setError(`Use an email ending in ${allowedUniFlowEmailText}.`);
+      return;
+    }
+
+    if (!isLoaded) return;
+    setSubmitting(true);
+    try {
+      await signIn.create({
+        strategy: "reset_password_email_code",
+        identifier: normalizedEmail,
+      });
+      setCode("");
+      setPassword("");
+      setResetMode("reset");
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Step 2: verify the emailed code and set the new password.
+  const handleResetSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    if (!isLoaded) return;
+
+    setSubmitting(true);
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
+        code,
+        password,
+      });
+
+      if (result.status === "complete" && result.createdSessionId) {
+        await finishSignIn(result.createdSessionId);
+      } else if (result.status === "needs_second_factor") {
+        // Account has MFA — hand off to the existing second-factor UI.
+        setCode("");
+        await beginSecondFactor(result);
+      } else {
+        setError(`Clerk returned reset status: ${result.status}.`);
+      }
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResendResetCode = async () => {
+    if (!isLoaded) return;
+    setError("");
+    setSubmitting(true);
+    try {
+      await signIn.create({
+        strategy: "reset_password_email_code",
+        identifier: email.trim().toLowerCase(),
+      });
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (pendingFactor) {
     return (
       <form className="uf-auth-form" onSubmit={handleSecondFactorSubmit}>
@@ -194,10 +287,63 @@ function CustomSignIn({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
               setCode("");
               setPassword("");
               setError("");
+              setResetMode(null);
             }}
           >
             Start over
           </button>
+        </div>
+      </form>
+    );
+  }
+
+  if (resetMode === "request") {
+    return (
+      <form className="uf-auth-form" onSubmit={handleRequestReset}>
+        <div className="uf-auth-heading">
+          <h1>Reset your password</h1>
+          <p>Enter your account email and we&apos;ll send you a reset code.</p>
+        </div>
+        {error && <div className="uf-banner uf-banner--error">{error}</div>}
+        <label className="uf-field">
+          <span>Email address</span>
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@mail.aub.edu" autoComplete="email" required />
+        </label>
+        <button className="uf-submit" type="submit" disabled={submitting || !isLoaded}>
+          {submitting ? "Sending code..." : "Send reset code"}
+        </button>
+        <button className="uf-secondary-button" type="button" disabled={submitting} onClick={exitForgotPassword}>
+          Back to sign in
+        </button>
+      </form>
+    );
+  }
+
+  if (resetMode === "reset") {
+    return (
+      <form className="uf-auth-form" onSubmit={handleResetSubmit}>
+        <div className="uf-auth-heading">
+          <h1>Enter reset code</h1>
+          <p>Enter the code sent to {email.trim().toLowerCase()} and choose a new password.</p>
+        </div>
+        {error && <div className="uf-banner uf-banner--error">{error}</div>}
+        <label className="uf-field">
+          <span>Reset code</span>
+          <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Enter code" inputMode="numeric" autoComplete="one-time-code" required />
+        </label>
+        <label className="uf-field">
+          <span>New password</span>
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Create a new password" autoComplete="new-password" minLength={8} required />
+        </label>
+        <button className="uf-submit" type="submit" disabled={submitting || !isLoaded}>
+          {submitting ? "Updating..." : "Reset password"}
+        </button>
+        <button className="uf-secondary-button" type="button" disabled={submitting || !isLoaded} onClick={handleResendResetCode}>
+          Resend code
+        </button>
+        <div className="uf-auth-switch">
+          Remembered it?{" "}
+          <button type="button" onClick={exitForgotPassword}>Back to sign in</button>
         </div>
       </form>
     );
@@ -218,6 +364,9 @@ function CustomSignIn({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
         <span>Password</span>
         <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" autoComplete="current-password" required />
       </label>
+      <div className="uf-forgot">
+        <button type="button" onClick={startForgotPassword}>Forgot password?</button>
+      </div>
       <button className="uf-submit" type="submit" disabled={submitting || !isLoaded}>
         {submitting ? "Signing in..." : "Sign in"}
       </button>
@@ -568,6 +717,20 @@ const css = `
     color: #2563eb;
     font: inherit;
     font-weight: 800;
+    cursor: pointer;
+    padding: 0;
+  }
+  .uf-forgot {
+    text-align: right;
+    margin-top: -6px;
+  }
+  .uf-forgot button {
+    border: 0;
+    background: none;
+    color: #2563eb;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
     cursor: pointer;
     padding: 0;
   }

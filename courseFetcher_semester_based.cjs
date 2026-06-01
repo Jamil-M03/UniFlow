@@ -5,15 +5,127 @@ require('dotenv').config();
 const BASE_URL = 'https://sturegss.aub.edu.lb/StudentRegistrationSsb';
 const PAGE_SIZE = 500;
 
-// Change these two values when you want a different term.
-// You can also override them at runtime:
-//   node courseFetcher_semester_based.cjs 202710 "Fall 2026-2027"
-//   TERM_CODE=202710 TERM_LABEL="Fall 2026-2027" node courseFetcher_semester_based.cjs
+// ── Term selection ──────────────────────────────────────────────────────────
+// Pick a term in whichever way is most convenient:
+//
+//   1) Season + academic-year start (recommended):
+//        node courseFetcher_semester_based.cjs summer 2026
+//        node courseFetcher_semester_based.cjs 30 2026      (30 == summer)
+//      The year is the FALL year of the academic year, i.e. 2026 == "2026-2027".
+//      The 6-digit Banner code and the human label are built automatically.
+//
+//   2) Full 6-digit Banner code (still supported for backwards compatibility):
+//        node courseFetcher_semester_based.cjs 202730
+//        node courseFetcher_semester_based.cjs 202730 "Summer 2026-2027"
+//      If you omit the label it is derived from the code.
+//
+//   3) Environment variables / nothing (falls back to the defaults below):
+//        TERM_CODE=202730 TERM_LABEL="Summer 2026-2027" node courseFetcher_semester_based.cjs
+//
+// Semester numbers (the last two digits of the Banner code):
+//        Fall = 10        Spring = 20        Summer = 30
+//
+// Flags:
+//   --not-current   Save the term WITHOUT marking it as the app's current/default
+//                   semester. (By default a fetched term becomes the current one.)
+//   --help, -h      Print this usage and exit.
 const DEFAULT_TERM_CODE = '202710';
 const DEFAULT_TERM_LABEL = 'Fall 2026-2027';
 
-const TERM_CODE = process.argv[2] || process.env.TERM_CODE || DEFAULT_TERM_CODE;
-const TERM_LABEL = process.argv[3] || process.env.TERM_LABEL || DEFAULT_TERM_LABEL;
+const SEASON_TO_SUFFIX = { fall: '10', spring: '20', summer: '30' };
+const SUFFIX_TO_SEASON = { '10': 'Fall', '20': 'Spring', '30': 'Summer' };
+
+function usageText() {
+  return [
+    'Usage:',
+    '  node courseFetcher_semester_based.cjs <season|TT> <startYear> [--not-current]',
+    '  node courseFetcher_semester_based.cjs <6-digit-code> ["Label"] [--not-current]',
+    '',
+    '  season : fall | spring | summer      TT : 10 (Fall) | 20 (Spring) | 30 (Summer)',
+    '  startYear : fall year of the academic year, e.g. 2026 for "2026-2027"',
+    '',
+    'Examples:',
+    '  node courseFetcher_semester_based.cjs summer 2026     -> 202730  "Summer 2026-2027"',
+    '  node courseFetcher_semester_based.cjs 30 2026         -> 202730  "Summer 2026-2027"',
+    '  node courseFetcher_semester_based.cjs 202710          -> 202710  "Fall 2026-2027"',
+  ].join('\n');
+}
+
+function exitWithUsage(message) {
+  if (message) console.error(`Error: ${message}\n`);
+  console.error(usageText());
+  process.exit(message ? 1 : 0);
+}
+
+// "202730" -> "Summer 2026-2027" (null if the code is not parseable)
+function deriveLabelFromCode(code) {
+  if (!/^\d{6}$/.test(code)) return null;
+  const bannerYear = Number(code.slice(0, 4));
+  const suffix = code.slice(4);
+  const season = SUFFIX_TO_SEASON[suffix];
+  if (!season || Number.isNaN(bannerYear)) return null;
+  return `${season} ${bannerYear - 1}-${bannerYear}`;
+}
+
+function resolveTerm(positionals) {
+  // No positional args: fall back to env vars, then to the defaults above.
+  if (positionals.length === 0) {
+    const code = process.env.TERM_CODE || DEFAULT_TERM_CODE;
+    const label =
+      process.env.TERM_LABEL || deriveLabelFromCode(code) || DEFAULT_TERM_LABEL;
+    return { code, label };
+  }
+
+  const first = positionals[0];
+
+  // Form 2: full 6-digit Banner code (+ optional explicit label).
+  if (/^\d{6}$/.test(first)) {
+    const code = first;
+    const label = positionals[1] || deriveLabelFromCode(code);
+    if (!label) {
+      exitWithUsage(
+        `could not derive a label from code "${code}" — pass one as the 2nd argument.`,
+      );
+    }
+    return { code, label };
+  }
+
+  // Form 1: <season|TT> <startYear>.
+  const key = String(first).toLowerCase();
+  const suffix = SEASON_TO_SUFFIX[key]
+    || (['10', '20', '30'].includes(first) ? first : null);
+
+  if (!suffix) {
+    exitWithUsage(
+      `unknown semester "${first}" — use fall/spring/summer or 10/20/30, or a 6-digit code.`,
+    );
+  }
+
+  const startYearArg = positionals[1];
+  if (!startYearArg || !/^\d{4}$/.test(startYearArg)) {
+    exitWithUsage(
+      'missing or invalid start year — pass the fall year, e.g. 2026 for the 2026-2027 academic year.',
+    );
+  }
+
+  const startYear = Number(startYearArg);
+  const bannerYear = startYear + 1;
+  const season = SUFFIX_TO_SEASON[suffix];
+  return {
+    code: `${bannerYear}${suffix}`,
+    label: `${season} ${startYear}-${bannerYear}`,
+  };
+}
+
+const rawArgs = process.argv.slice(2);
+if (rawArgs.includes('--help') || rawArgs.includes('-h')) {
+  exitWithUsage();
+}
+
+const IS_CURRENT = !rawArgs.includes('--not-current');
+const positionalArgs = rawArgs.filter((arg) => !arg.startsWith('--'));
+
+const { code: TERM_CODE, label: TERM_LABEL } = resolveTerm(positionalArgs);
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -27,7 +139,7 @@ async function saveTermToDB() {
       {
         code: TERM_CODE,
         description: TERM_LABEL,
-        is_current: true,
+        is_current: IS_CURRENT,
       },
       { onConflict: 'code' }
     );
@@ -35,7 +147,9 @@ async function saveTermToDB() {
   if (error) {
     console.error(`  Warning: term save error (${TERM_LABEL}): ${error.message}`);
   } else {
-    console.log(`Saved term: ${TERM_LABEL} (${TERM_CODE})`);
+    console.log(
+      `Saved term: ${TERM_LABEL} (${TERM_CODE})${IS_CURRENT ? ' [current]' : ' [not current]'}`,
+    );
   }
 }
 
