@@ -10,6 +10,27 @@ function getAuthErrorMessage(error: unknown) {
   return clerkError.errors?.[0]?.longMessage || clerkError.errors?.[0]?.message || clerkError.message || "Something went wrong. Please try again.";
 }
 
+// Ask the browser to offer saving/updating the credential after a successful
+// sign-in, sign-up, or password reset. In a SPA there is no full-page form
+// submit, so Chromium-based browsers need this explicit Credential Management
+// API call to surface the "Save password?" prompt. Firefox/Safari don't
+// implement PasswordCredential but trigger their own prompt from the form's
+// autocomplete attributes, so this is a best-effort enhancement either way.
+type PasswordCredentialCtor = new (data: { id: string; password: string }) => Credential;
+
+async function saveBrowserCredential(email: string, password: string) {
+  if (!email || !password) return;
+  try {
+    const Ctor = (window as unknown as { PasswordCredential?: PasswordCredentialCtor }).PasswordCredential;
+    if (Ctor && navigator.credentials && typeof navigator.credentials.store === "function") {
+      const credential = new Ctor({ id: email, password });
+      await navigator.credentials.store(credential);
+    }
+  } catch {
+    // Unsupported browser or the user dismissed the prompt — safe to ignore.
+  }
+}
+
 type SignInFactorState = {
   strategy: "email_code" | "phone_code" | "totp" | "backup_code";
   label: string;
@@ -28,6 +49,7 @@ function CustomSignIn({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
 
   const finishSignIn = async (sessionId: string | null) => {
     if (sessionId) {
+      await saveBrowserCredential(email.trim().toLowerCase(), password);
       await setActive({ session: sessionId });
     }
   };
@@ -405,6 +427,7 @@ function CustomSignUp({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
       });
 
       if (result.status === "complete" && result.createdSessionId) {
+        await saveBrowserCredential(normalizedEmail, password);
         await setActive({ session: result.createdSessionId });
         return;
       }
@@ -427,6 +450,7 @@ function CustomSignUp({ onSwitchToSignIn }: { onSwitchToSignIn: () => void }) {
     try {
       const result = await signUp.attemptEmailAddressVerification({ code });
       if (result.status === "complete" && result.createdSessionId) {
+        await saveBrowserCredential(email.trim().toLowerCase(), password);
         await setActive({ session: result.createdSessionId });
       } else {
         setError("Verification worked, but Clerk still needs another signup requirement completed.");
@@ -568,39 +592,44 @@ export default function Login() {
   );
 }
 
+// Colors are driven by the app's theme variables (defined in App.css), so this
+// page follows the user's dark/light choice. The blue brand accent and the
+// semantic banner colors are intentionally kept fixed across both themes.
 const css = `
   .uf-page {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f5f5f4;
+    background: var(--bg, #f5f5f4);
+    color: var(--text, #111827);
+    color-scheme: var(--select-scheme, light);
     padding: 40px 20px;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
   .uf-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--panel, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
     border-radius: 16px;
     padding: 36px;
     width: 100%;
     max-width: 440px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.10);
   }
   .uf-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
   .uf-logo-mark {
     width: 32px; height: 32px; border-radius: 8px; background: #2563eb;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .uf-logo-name { font-size: 17px; font-weight: 700; color: #111827; }
-  .uf-tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 18px; }
+  .uf-logo-name { font-size: 17px; font-weight: 700; color: var(--text, #111827); }
+  .uf-tabs { display: flex; border-bottom: 1px solid var(--border, #e5e7eb); margin-bottom: 18px; }
   .uf-tab {
     flex: 1; padding: 9px 0; background: none; border: none;
     border-bottom: 2px solid transparent; margin-bottom: -1px;
-    font-family: inherit; font-size: 13px; font-weight: 600; color: #9ca3af;
+    font-family: inherit; font-size: 13px; font-weight: 600; color: var(--muted, #9ca3af);
     cursor: pointer; transition: color .2s, border-color .2s;
   }
-  .uf-tab:hover { color: #6b7280; }
+  .uf-tab:hover { color: var(--text, #6b7280); }
   .uf-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
   .uf-banner { padding: 11px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
   .uf-banner--success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
@@ -636,14 +665,14 @@ const css = `
   }
   .uf-auth-heading h1 {
     margin: 0;
-    color: #111827;
+    color: var(--text, #111827);
     font-size: 22px;
     line-height: 1.2;
     letter-spacing: 0;
   }
   .uf-auth-heading p {
     margin: 8px 0 0;
-    color: #6b7280;
+    color: var(--muted, #6b7280);
     font-size: 14px;
     line-height: 1.4;
   }
@@ -653,25 +682,26 @@ const css = `
     gap: 7px;
   }
   .uf-field span {
-    color: #1f2937;
+    color: var(--text, #1f2937);
     font-size: 13px;
     font-weight: 800;
   }
   .uf-field input {
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--select-border, #d1d5db);
     border-radius: 8px;
-    color: #111827;
-    background: #fff;
+    color: var(--text, #111827);
+    background: var(--select-surface, #fff);
     padding: 11px 12px;
     font: inherit;
     outline: none;
     transition: border-color .15s, box-shadow .15s;
   }
+  .uf-field input::placeholder { color: var(--muted, #9ca3af); }
   .uf-field input:focus {
     border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
   }
   .uf-submit {
     border: 0;
@@ -693,10 +723,10 @@ const css = `
     cursor: not-allowed;
   }
   .uf-secondary-button {
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border, #d1d5db);
     border-radius: 8px;
-    background: #fff;
-    color: #1f2937;
+    background: var(--panel, #fff);
+    color: var(--text, #1f2937);
     padding: 10px 16px;
     font: inherit;
     font-weight: 700;
@@ -708,7 +738,7 @@ const css = `
   }
   .uf-auth-switch {
     text-align: center;
-    color: #6b7280;
+    color: var(--muted, #6b7280);
     font-size: 13px;
   }
   .uf-auth-switch button {
@@ -735,7 +765,7 @@ const css = `
     padding: 0;
   }
   .uf-footer {
-    margin-top: 24px; padding-top: 20px; border-top: 1px solid #f3f4f6;
-    text-align: center; font-size: 11px; color: #9ca3af;
+    margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border, #f3f4f6);
+    text-align: center; font-size: 11px; color: var(--muted, #9ca3af);
   }
 `;

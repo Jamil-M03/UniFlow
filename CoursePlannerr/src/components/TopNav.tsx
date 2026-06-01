@@ -624,6 +624,9 @@ export function TopNav({
           >
             {lightMode ? "🌙" : "☀️"}
           </button>
+        </div>
+
+        <div className="topNav__account">
           <UserButton />
           <button
             className="topNav__logout topNav__logoutBtn"
@@ -635,17 +638,18 @@ export function TopNav({
           >
             Logout
           </button>
-          {/* ── MOBILE: hamburger button — lives at end of controls ── */}
-          <button
-            type="button"
-            className="topNav__hamburger"
-            onClick={() => setMobileMenuOpen((o) => !o)}
-            aria-label="Toggle menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? "✕" : "☰"}
-          </button>
         </div>
+
+        {/* ── MOBILE: hamburger button — corner toggle for the nav menu ── */}
+        <button
+          type="button"
+          className="topNav__hamburger"
+          onClick={() => setMobileMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? "✕" : "☰"}
+        </button>
       </header>
 
       {/* ── GPA Calculator Modal ─────────────────────────────────── */}
