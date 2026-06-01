@@ -395,13 +395,13 @@ const allowedOrigins = new Set([
   "http://localhost:5173",
   "http://localhost:4173",
   "https://cmps-271.vercel.app",
+  "https://uniflow-planner.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean));
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
-  if (allowedOrigins.has(origin)) return true;
-  return /^https:\/\/cmps-271-[a-z0-9-]+\.vercel\.app$/i.test(origin);
+  return allowedOrigins.has(origin);
 }
 
 const corsOptions = {
