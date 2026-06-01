@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Course } from '../types';
 
 type Tab = 'welcome' | 'info' | 'crn';
@@ -30,6 +31,29 @@ function Row({ label, value, alwaysShow }: { label: string; value: React.ReactNo
 }
 
 export function LeftInfoPanel({ activeTab, onTabChange, selectedCourse, selectedCrns, scheduled, onToggleSchedule }: Props) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCrns = async () => {
+    const crns = scheduled.map((c) => c.crn).join('\n');
+    try {
+      await navigator.clipboard.writeText(crns);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback for older browsers
+      const el = document.createElement('textarea');
+      el.value = crns;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <aside className="leftPanel">
       <div className="sideTabs" role="tablist" aria-label="Info tabs">
@@ -242,7 +266,7 @@ export function LeftInfoPanel({ activeTab, onTabChange, selectedCourse, selected
                   </button>
                 ))}
 
-                {/* Summary row */}
+                {/* Summary + Copy CRNs row */}
                 <div style={{
                   marginTop: 4,
                   padding: '8px 12px',
@@ -251,6 +275,7 @@ export function LeftInfoPanel({ activeTab, onTabChange, selectedCourse, selected
                   border: '1px solid var(--border)',
                   display: 'flex',
                   justifyContent: 'space-between',
+                  alignItems: 'center',
                   fontSize: 12,
                   color: 'var(--muted)',
                 }}>
@@ -259,6 +284,55 @@ export function LeftInfoPanel({ activeTab, onTabChange, selectedCourse, selected
                     {scheduled.reduce((sum, c) => sum + (c.credits ?? 0), 0)}
                   </span>
                 </div>
+
+                {/* Copy CRNs button */}
+                <button
+                  type="button"
+                  onClick={handleCopyCrns}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 7,
+                    width: '100%',
+                    padding: '9px 12px',
+                    background: copied ? 'rgba(34,197,94,0.12)' : 'var(--panel2)',
+                    border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: copied ? '#22c55e' : 'var(--muted)',
+                    transition: 'all 0.2s',
+                    fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={e => {
+                    if (!copied) {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(163,38,56,0.4)';
+                      (e.currentTarget as HTMLButtonElement).style.color = '#A32638';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(163,38,56,0.06)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!copied) {
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted)';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'var(--panel2)';
+                    }
+                  }}
+                >
+                  {copied ? (
+                    <>
+                      <span style={{ fontSize: 13 }}>✓</span>
+                      CRNs copied!
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 13 }}>⧉</span>
+                      Copy all CRNs
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
