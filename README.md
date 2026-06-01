@@ -7,7 +7,7 @@ course catalog, build conflict-free schedules visually, find empty
 classrooms, review professors anonymously, calculate GPA, and ask an AI
 assistant for personalized scheduling help — all in one place.
 
-**Live:** https://cmps-271.vercel.app
+**Live:** https://uniflow-planner.vercel.app/
 **Stack:** React 19 · TypeScript · Vite · Node.js · Express · Supabase (PostgreSQL) · Clerk · Vercel · Render · Groq (Llama 3.3 70B) · Hugging Face · Playwright
 
 ---
