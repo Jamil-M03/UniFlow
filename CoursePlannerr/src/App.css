@@ -48,8 +48,8 @@ body.light {
   --select-option-text: #1b2433;
   --select-disabled-text: #97a1b1;
   --select-scheme: light;
-  --light-chrome: #151922;
-  --light-chrome-2: #1d2430;
+  --light-chrome: #ffffff;
+  --light-chrome-2: #eef2f8;
   --light-shadow: 0 14px 34px rgba(24, 32, 45, 0.12);
   --light-shadow-soft: 0 6px 16px rgba(24, 32, 45, 0.08);
 }
@@ -60,32 +60,32 @@ body.light .appShell {
 }
 
 body.light .topNav {
-  background: linear-gradient(180deg, #1d2430 0%, #151922 100%);
-  border-bottom: 1px solid #2c3442;
-  box-shadow: 0 10px 26px rgba(24,32,45,0.18);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f2;
+  box-shadow: 0 1px 0 rgba(24,32,45,0.04), 0 6px 18px rgba(24,32,45,0.06);
 }
 body.light .topNav__logo { background: linear-gradient(135deg, #a32638, #4b6f9f); }
-body.light .topNav__link { color: #d7deea; }
-body.light .topNav__link:hover { background: rgba(255,255,255,0.08); color: #ffffff; }
+body.light .topNav__link { color: #475569; }
+body.light .topNav__link:hover { background: rgba(15,23,42,0.06); color: #0f1729; }
 body.light .topNav__link.isActive {
   background: #a32638;
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(163,38,56,0.28);
 }
 body.light .topNav__logout {
-  color: #d7deea;
-  border-color: rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.06);
-}
-body.light .topNav__logout:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
-body.light .topNav__brandText { color: #ffffff; }
-body.light .topNav__brandButton:hover .topNav__brandText { color: #f2b8c1; }
-body.light .topNav__statusText,
-body.light .topNav__controlLabel { color: #aab5c4; }
-body.light .topNav__select {
-  background: #f8fafc;
+  color: #475569;
   border-color: #dbe3ee;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+  background: #f4f7fb;
+}
+body.light .topNav__logout:hover { background: #eef2f8; border-color: #c7d0dd; }
+body.light .topNav__brandText { color: #17202d; }
+body.light .topNav__brandButton:hover .topNav__brandText { color: #a32638; }
+body.light .topNav__statusText,
+body.light .topNav__controlLabel { color: #647386; }
+body.light .topNav__select {
+  background: #ffffff;
+  border-color: #d7dee9;
+  box-shadow: 0 1px 2px rgba(24,32,45,0.06);
 }
 
 body.light .leftPanel,
@@ -95,18 +95,18 @@ body.light .rightPanel {
 
 body.light .sideTabs {
   background: var(--light-chrome);
-  border-bottom-color: #2c3442;
+  border-bottom-color: #e2e8f2;
 }
 body.light .sideTabs__tab {
-  color: #c8d1df;
+  color: #475569;
   border-color: transparent;
   background: transparent;
 }
-body.light .sideTabs__tab:hover { background: rgba(255,255,255,0.08); color: #ffffff; }
+body.light .sideTabs__tab:hover { background: rgba(15,23,42,0.06); color: #0f1729; }
 body.light .sideTabs__tab.isActive {
-  background: #ffffff;
+  background: #fdeef0;
   color: #a32638;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+  box-shadow: inset 0 0 0 1px #f0c4cc;
 }
 
 body.light .welcomeBox,
@@ -125,26 +125,26 @@ body.light .infoSectionHeader {
 
 body.light .rightPanel__top {
   background: var(--light-chrome);
-  border-bottom-color: #2c3442;
+  border-bottom-color: #e2e8f2;
 }
 body.light .schTab {
-  color: #c8d1df;
-  border-color: rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.05);
+  color: #475569;
+  border-color: #dbe3ee;
+  background: #f4f7fb;
 }
-body.light .schTab:hover { border-color: rgba(255,255,255,0.28); color: #ffffff; }
+body.light .schTab:hover { border-color: #c7d0dd; color: #0f1729; }
 body.light .schTab.isActive {
   background: #ffffff;
-  border-color: #ffffff;
+  border-color: #f0c4cc;
   color: #a32638;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+  box-shadow: 0 1px 3px rgba(24,32,45,0.10);
 }
 body.light .rightPanel__scroll { background: #f4f7fb; }
 body.light .sectionTitle { color: #17202d; }
 body.light .divider { border-top-color: #dbe3ee; }
 body.light .scheduleToggleRow {
   background: var(--light-chrome-2);
-  border-bottom-color: #2c3442;
+  border-bottom-color: #e2e8f2;
 }
 
 body.light .middlePanel {
@@ -162,14 +162,14 @@ body.light .schFreeStrip {
 }
 body.light .schDays {
   background: var(--light-chrome);
-  border-bottom-color: #2c3442;
-  box-shadow: 0 8px 22px rgba(24,32,45,0.16);
+  border-bottom-color: #e2e8f2;
+  box-shadow: 0 2px 8px rgba(24,32,45,0.06);
 }
 body.light .schDays__corner,
 body.light .schDays__day {
-  border-color: #2c3442;
+  border-color: #e6ebf2;
 }
-body.light .schDays__day { color: #e9eef7; }
+body.light .schDays__day { color: #334155; }
 body.light .schGrid,
 body.light .schCanvas {
   background: #fbfcfe;
@@ -234,9 +234,9 @@ body.light .searchBox::placeholder { color: #97a1b1; }
 
 body.light .scheduleToggleBtn {
   background: var(--light-chrome-2);
-  color: #aab5c4;
+  color: #647386;
 }
-body.light .scheduleToggleBtn:hover { color: #ffffff; background: #252d3a; }
+body.light .scheduleToggleBtn:hover { color: #0f1729; background: #e2e8f2; }
 
 body.light .schFreeCard {
   background: #ffffff;
@@ -261,11 +261,11 @@ body.light .ai-panel {
 }
 body.light .ai-panel__header {
   background: var(--light-chrome);
-  border-bottom-color: #2c3442;
+  border-bottom-color: #e2e8f2;
 }
-body.light .ai-panel__title { color: #ffffff; }
-body.light .ai-panel__close { color: #aab5c4; }
-body.light .ai-panel__close:hover { color: #ffffff; }
+body.light .ai-panel__title { color: #17202d; }
+body.light .ai-panel__close { color: #647386; }
+body.light .ai-panel__close:hover { color: #0f1729; }
 body.light .ai-msg--assistant .ai-msg__bubble,
 body.light .ai-proposal {
   background: #f4f7fb;
@@ -394,6 +394,7 @@ body.light .roomCard__slot {
   font-size: 13px;
 }
 .topNav__controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.topNav__account { display: flex; align-items: center; gap: 8px; margin-left: 4px; }
 .topNav__controlLabel { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .topNav__select {
   color-scheme: var(--select-scheme);
