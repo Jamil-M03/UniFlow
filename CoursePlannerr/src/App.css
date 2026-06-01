@@ -393,7 +393,12 @@ body.light .roomCard__slot {
   text-overflow: ellipsis;
   font-size: 13px;
 }
-.topNav__controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.topNav__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
 .topNav__account { display: flex; align-items: center; gap: 8px; margin-left: 4px; }
 .topNav__controlLabel { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .topNav__select {
@@ -421,6 +426,23 @@ body.light .roomCard__slot {
   white-space: nowrap;
 }
 .topNav__logout:hover { background: rgba(255,255,255,0.06); }
+
+/* Theme toggle — keep same size as logout button */
+.topNav__themeToggle {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+/* Logout button — consistent sizing */
+.topNav__logoutBtn {
+  flex-shrink: 0;
+}
 
 /* ── Main container ── */
 .mainContainer {
@@ -1004,6 +1026,27 @@ body.light .roomCard__slot {
   .topNav__brandText { display: none; }
   .topNav__controlLabel { display: none; }
   .schDays__day { font-size: 10px; }
+}
+
+/* ── Laptop / mid-size screens: tighten nav controls ── */
+@media (max-width: 1024px) {
+  .topNav__select {
+    max-width: 150px;
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+  .topNav__controls {
+    gap: 6px;
+  }
+  .topNav__logoutBtn {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  .topNav__themeToggle {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 900px) {
