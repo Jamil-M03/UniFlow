@@ -359,7 +359,6 @@ body.light .roomCard__slot {
 .topNav__brandButton:hover .topNav__brandText {
   color: #dbe6ff;
 }
-.topNav__links { display: flex; gap: 6px; }
 .topNav__link {
   color: var(--text);
   text-decoration: none;
@@ -398,8 +397,11 @@ body.light .roomCard__slot {
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 .topNav__account { display: flex; align-items: center; gap: 8px; margin-left: 4px; }
+.topNav__links { display: flex; gap: 6px; flex-shrink: 1; flex-wrap: wrap; }
 .topNav__controlLabel { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .topNav__select {
   color-scheme: var(--select-scheme);
@@ -1012,11 +1014,23 @@ body.light .roomCard__slot {
   }
 }
 
+@media (max-width: 1400px) {
+  .topNav__link {
+    font-size: 13px;
+    padding: 6px 6px;
+  }
+}
+
 @media (max-width: 1280px) {
   .mainContainer {
     grid-template-columns: 230px 1fr 300px;
   }
   .topNav__status { display: none; }
+  .topNav__controlLabel { display: none; }
+  .topNav__link {
+    font-size: 12px;
+    padding: 5px 5px;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -1029,14 +1043,23 @@ body.light .roomCard__slot {
 }
 
 /* ── Laptop / mid-size screens: tighten nav controls ── */
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
+  .topNav__controlLabel { display: none; }
+}
+
+@media (max-width: 1100px) {
   .topNav__select {
-    max-width: 150px;
+    max-width: 160px;
     font-size: 12px;
     padding: 5px 7px;
   }
-  .topNav__controls {
-    gap: 6px;
+  .topNav__controls { gap: 6px; }
+}
+
+@media (max-width: 960px) {
+  .topNav__select {
+    max-width: 130px;
+    font-size: 12px;
   }
   .topNav__logoutBtn {
     font-size: 12px;
