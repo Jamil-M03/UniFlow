@@ -82,7 +82,7 @@ export function TopNav({
   const navigate = useNavigate();
   const supabase = useSupabase();
   const { signOut } = useClerk();
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
   const { appUserId, clerkUserId, email } = useAppUser();
 
   // ── MOBILE: hamburger state ──────────────────────────────
@@ -582,22 +582,24 @@ export function TopNav({
             </button>
           )}
 
-          {/* ── Logout inside the mobile menu ── */}
-          <button
-            className="topNav__link topNav__linkButton topNav__logoutMobile"
-            type="button"
-            onClick={async () => {
-              await signOut();
-              navigate("/login");
-            }}
-          >
-            Logout
-          </button>
+          {/* ── Logout inside the mobile menu (only when signed in) ── */}
+          {isSignedIn && (
+            <button
+              className="topNav__link topNav__linkButton topNav__logoutMobile"
+              type="button"
+              onClick={async () => {
+                await signOut();
+                navigate("/login");
+              }}
+            >
+              Logout
+            </button>
+          )}
         </nav>
 
         <div className="topNav__status" title={lastUpdatedText}>
           <span className="topNav__statusText">
-            {semesterLabel} — {lastUpdatedText}
+            Semester — {lastUpdatedText}
           </span>
         </div>
 
@@ -622,19 +624,21 @@ export function TopNav({
             onClick={toggleTheme}
             title="Toggle light/dark mode"
           >
-            {lightMode ? "🌙" : "☀️"}
+            {lightMode ? "☀️" : "🌙"}
           </button>
           <UserButton />
-          <button
-            className="topNav__logout topNav__logoutBtn"
-            type="button"
-            onClick={async () => {
-              await signOut();
-              navigate("/login");
-            }}
-          >
-            Logout
-          </button>
+          {isSignedIn && (
+            <button
+              className="topNav__logout topNav__logoutBtn"
+              type="button"
+              onClick={async () => {
+                await signOut();
+                navigate("/login");
+              }}
+            >
+              Logout
+            </button>
+          )}
           {/* ── MOBILE: hamburger button — lives at end of controls ── */}
           <button
             type="button"
