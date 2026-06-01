@@ -401,12 +401,21 @@ const allowedOrigins = new Set([
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
-  return allowedOrigins.has(origin);
+
+  return (
+    allowedOrigins.has(origin) ||
+    /^https:\/\/cmps-271-[a-z0-9-]+\.vercel\.app$/i.test(origin) ||
+    /^https:\/\/uniflow-planner-[a-z0-9-]+\.vercel\.app$/i.test(origin)
+  );
 }
 
 const corsOptions = {
   origin(origin, callback) {
-    callback(null, isAllowedOrigin(origin));
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
   },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
