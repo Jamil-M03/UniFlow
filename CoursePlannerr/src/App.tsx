@@ -1,5 +1,6 @@
 import { Suspense, lazy, useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
 import "./App.css";
 import type { Course } from "./types";
 import { TopNav } from "./components/TopNav";
@@ -145,6 +146,9 @@ const COURSE_COLORS = [
 
 export default function App() {
   const appName = "UniFlow";
+  const navigate = useNavigate();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const [showLoginHint, setShowLoginHint] = useState(true);
   const supabase = useSupabase();
   const { appUserId, loading: appUserLoading } = useAppUser();
   const userId = appUserId ?? null;
@@ -636,6 +640,57 @@ export default function App() {
         onApplySchedule={handleApplyAISchedule}
         activeSlot={activeSlot}
       />
+
+      {authLoaded && !isSignedIn && showLoginHint && (
+        <div className="uf-login-hint" role="status">
+          <span className="uf-login-hint__text">
+            You&apos;re browsing as a guest. Sign in to save your schedule to your account.
+          </span>
+          <div className="uf-login-hint__actions">
+            <button
+              type="button"
+              className="uf-login-hint__signin"
+              onClick={() => navigate("/login")}
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
+              className="uf-login-hint__close"
+              aria-label="Dismiss"
+              onClick={() => setShowLoginHint(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <style>{`
+            .uf-login-hint {
+              position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+              z-index: 9999; display: flex; align-items: center; gap: 12px;
+              max-width: 92vw;
+              background: var(--panel, #fff); color: var(--text, #111827);
+              border: 1px solid var(--border, #e5e7eb); border-radius: 12px;
+              padding: 10px 12px 10px 16px;
+              box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+              font-size: 13px; line-height: 1.4;
+            }
+            .uf-login-hint__text { font-weight: 600; }
+            .uf-login-hint__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+            .uf-login-hint__signin {
+              border: 0; border-radius: 8px; background: #2563eb; color: #fff;
+              font: inherit; font-weight: 700; font-size: 12px;
+              padding: 7px 14px; cursor: pointer; white-space: nowrap;
+            }
+            .uf-login-hint__signin:hover { background: #1d4ed8; }
+            .uf-login-hint__close {
+              border: 0; background: transparent; color: var(--muted, #9ca3af);
+              font-size: 13px; cursor: pointer; width: 26px; height: 26px;
+              border-radius: 7px; flex-shrink: 0;
+            }
+            .uf-login-hint__close:hover { background: rgba(0,0,0,0.06); }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 
@@ -643,7 +698,7 @@ export default function App() {
     <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<ProtectedRoute>{mainApp}</ProtectedRoute>} />
+        <Route path="/" element={mainApp} />
         <Route
           path="/reviews"
           element={
