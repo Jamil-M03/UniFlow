@@ -319,7 +319,6 @@ export function RightSearchPanel({
               Schedule {slot}
             </button>
           ))}
-          <button className="schTab" type="button" title="Settings" disabled>⚙️</button>
         </div>
         <input
           className="searchBox"
