@@ -139,7 +139,7 @@ cd uniflow
 npm install
 
 # Install front-end deps
-cd CoursePlannerr
+cd CoursePlanner
 npm install
 cd ..
 ```
@@ -158,7 +158,7 @@ HF_TOKEN=...
 PORT=3001
 ```
 
-**`./CoursePlannerr/.env`** (front-end):
+**`./CoursePlanner/.env`** (front-end):
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...      # read-only under RLS
@@ -176,7 +176,7 @@ in the Supabase SQL editor.
 npm start                  # = node server.cjs
 
 # Terminal 2: frontend
-cd CoursePlannerr
+cd CoursePlanner
 npm run dev
 ```
 
@@ -203,10 +203,10 @@ Expect 5–15 minutes depending on department count.
 
 The schedule logic (free-slot finding, classroom availability, and
 registered-course resolution against the live catalog) has unit tests
-under `CoursePlannerr/tests/`:
+under `CoursePlanner/tests/`:
 
 ```bash
-cd CoursePlannerr
+cd CoursePlanner
 npm test
 ```
 
@@ -222,7 +222,7 @@ uniflow/
 ├── db/
 │   └── policies.sql                    Supabase Row Level Security policies
 ├── package.json                        backend deps (Express, Playwright, Groq, HF, Clerk)
-└── CoursePlannerr/                     React + TypeScript front-end
+└── CoursePlanner/                     React + TypeScript front-end
     ├── src/
     │   ├── pages/                      route-level views
     │   │   ├── AdminPortal.tsx         moderator queue (admin-only)
