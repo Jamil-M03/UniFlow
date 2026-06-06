@@ -240,6 +240,21 @@ export function TopNav({
 
   const toggleTheme = () => setLightMode((prev) => !prev);
 
+  // Theme Clerk's UserButton popover to match the app palette (App.css tokens).
+  const clerkAppearance = lightMode
+    ? { variables: { colorPrimary: "#a32638" } }
+    : {
+        variables: {
+          colorPrimary: "#7aa2ff",
+          colorBackground: "#141922",
+          colorText: "#e9eef7",
+          colorTextSecondary: "#9aa7ba",
+          colorInputBackground: "#10141c",
+          colorInputText: "#e9eef7",
+          colorNeutral: "#e9eef7",
+        },
+      };
+
   const updateGradeRow = (id: number, field: string, val: string) =>
     setGradeRows((p) =>
       p.map((r) => (r.id === id ? { ...r, [field]: val } : r)),
@@ -647,7 +662,7 @@ export function TopNav({
           >
             {lightMode ? "☀️" : "🌙"}
           </button>
-          <UserButton />
+          <UserButton appearance={clerkAppearance} />
           {isSignedIn && (
             <button
               className="topNav__logout topNav__logoutBtn"
