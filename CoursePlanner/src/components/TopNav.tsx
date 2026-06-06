@@ -662,7 +662,10 @@ export function TopNav({
           >
             {lightMode ? "☀️" : "🌙"}
           </button>
-          <UserButton appearance={clerkAppearance} />
+          <UserButton
+            appearance={clerkAppearance}
+            userProfileProps={{ appearance: clerkAppearance }}
+          />
           {isSignedIn && (
             <button
               className="topNav__logout topNav__logoutBtn"
