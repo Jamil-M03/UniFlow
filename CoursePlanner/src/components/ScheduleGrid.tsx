@@ -912,8 +912,8 @@ export function ScheduleGrid({
               const hueColor = `hsl(${hue}, 100%, 50%)`;
               const pickedHex = hsvSelectionToHex(hue, pickerPos);
 
-              const handleGradientClick = (
-                e: React.MouseEvent<HTMLDivElement>,
+              const updateGradient = (
+                e: React.PointerEvent<HTMLDivElement>,
               ) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = Math.max(
@@ -927,7 +927,7 @@ export function ScheduleGrid({
                 setPickerPos({ x, y });
                 setPreviewColor(hsvSelectionToHex(hue, { x, y }));
               };
-              const handleHueClick = (e: React.MouseEvent<HTMLDivElement>) => {
+              const updateHue = (e: React.PointerEvent<HTMLDivElement>) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const y = Math.max(
                   0,
@@ -948,7 +948,13 @@ export function ScheduleGrid({
                 >
                   <div style={{ display: "flex", gap: "6px" }}>
                     <div
-                      onClick={handleGradientClick}
+                      onPointerDown={(e) => {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        updateGradient(e);
+                      }}
+                      onPointerMove={(e) => {
+                        if (e.buttons !== 0) updateGradient(e);
+                      }}
                       style={{
                         width: "160px",
                         height: "120px",
@@ -956,6 +962,8 @@ export function ScheduleGrid({
                         background: `linear-gradient(to bottom, transparent, black), linear-gradient(to right, white, ${hueColor})`,
                         borderRadius: "4px",
                         cursor: "crosshair",
+                        touchAction: "none",
+                        userSelect: "none",
                         flexShrink: 0,
                       }}
                     >
@@ -974,7 +982,13 @@ export function ScheduleGrid({
                       />
                     </div>
                     <div
-                      onClick={handleHueClick}
+                      onPointerDown={(e) => {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        updateHue(e);
+                      }}
+                      onPointerMove={(e) => {
+                        if (e.buttons !== 0) updateHue(e);
+                      }}
                       style={{
                         width: "16px",
                         height: "120px",
@@ -983,6 +997,8 @@ export function ScheduleGrid({
                           "linear-gradient(to bottom, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)",
                         borderRadius: "4px",
                         cursor: "ns-resize",
+                        touchAction: "none",
+                        userSelect: "none",
                         position: "relative",
                       }}
                     >
