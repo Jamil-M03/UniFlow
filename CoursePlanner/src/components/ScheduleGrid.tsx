@@ -57,6 +57,43 @@ function rgbToHex(r: number, g: number, b: number) {
   );
 }
 
+// Convert the picker's hue + (saturation/value) position into a hex color.
+// Shared by the picker render and the live-preview handlers.
+function hsvSelectionToHex(hue: number, pos: { x: number; y: number }): string {
+  const sat = pos.x;
+  const val = 1 - pos.y;
+  const c = val * sat;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = val - c;
+  let rr = 0;
+  let gg = 0;
+  let bb = 0;
+  if (hue < 60) {
+    rr = c;
+    gg = x;
+  } else if (hue < 120) {
+    rr = x;
+    gg = c;
+  } else if (hue < 180) {
+    gg = c;
+    bb = x;
+  } else if (hue < 240) {
+    gg = x;
+    bb = c;
+  } else if (hue < 300) {
+    rr = x;
+    bb = c;
+  } else {
+    rr = c;
+    bb = x;
+  }
+  return rgbToHex(
+    Math.round((rr + m) * 255),
+    Math.round((gg + m) * 255),
+    Math.round((bb + m) * 255),
+  );
+}
+
 type Block = {
   course: Course;
   meeting: Meeting;
@@ -80,6 +117,9 @@ type Props = {
   onHoverCourse: (course: Course | null) => void;
   courseColorMap: Map<string, string>;
   onColorChange: (courseId: string, color: string) => void;
+  onToggleFavorite: (course: Course) => void;
+  onToggleSchedule: (course: Course) => void;
+  favoriteIds: Set<string>;
   semesterLabel?: string;
 };
 
@@ -91,6 +131,9 @@ export function ScheduleGrid({
   onHoverCourse,
   courseColorMap,
   onColorChange,
+  onToggleFavorite,
+  onToggleSchedule,
+  favoriteIds,
   semesterLabel = "Schedule",
 }: Props) {
   const startDayMin = toMinutes(GRID_START_OF_DAY);
@@ -126,6 +169,8 @@ export function ScheduleGrid({
   const [colorTab, setColorTab] = useState<"picker" | "rgb">("picker");
   const [hue, setHue] = useState(220);
   const [pickerPos, setPickerPos] = useState({ x: 0.3, y: 0.3 });
+  // Live color preview for the course whose context menu is open, before Apply.
+  const [previewColor, setPreviewColor] = useState<string | null>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -136,6 +181,7 @@ export function ScheduleGrid({
         !contextMenuRef.current.contains(e.target as Node)
       ) {
         setContextMenu(null);
+        setPreviewColor(null);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -144,6 +190,7 @@ export function ScheduleGrid({
 
   useEffect(() => {
     if (contextMenu) {
+      setPreviewColor(null);
       const currentColor =
         courseColorMap.get(contextMenu.courseId) ?? "#1a5fa8";
       const { r, g, b } = hexToRgb(currentColor);
@@ -319,6 +366,7 @@ export function ScheduleGrid({
   const handlePickColor = (color: string) => {
     if (contextMenu) {
       onColorChange(contextMenu.courseId, color);
+      setPreviewColor(null);
       setContextMenu(null);
     }
   };
@@ -522,7 +570,7 @@ export function ScheduleGrid({
         {tipVisible ? (
           <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             Tip: Search on the right → ☑ add courses → see them appear here.
-            Right-click to change color.
+            Right-click a course to change its color, favorite it, or remove it.
             <button
               type="button"
               onClick={() => setTipVisible(false)}
@@ -732,7 +780,10 @@ export function ScheduleGrid({
               const top = (b.startMin - startDayMin) * pxPerMin;
               const height = Math.max(18, (b.endMin - b.startMin) * pxPerMin);
               const blockKey = `${b.course.id}-${b.day}-${b.startMin}`;
-              const color = courseColorMap.get(b.course.id) ?? "#1a5fa8";
+              const color =
+                contextMenu?.courseId === b.course.id && previewColor
+                  ? previewColor
+                  : courseColorMap.get(b.course.id) ?? "#1a5fa8";
               const isHovered = hoveredBlock === blockKey;
               return (
                 <button
@@ -769,7 +820,7 @@ export function ScheduleGrid({
                     setHoveredBlock(null);
                     onHoverCourse(null);
                   }}
-                  title={`${b.course.code} – right-click to change color`}
+                  title={`${b.course.code} – right-click for color, favorite & remove`}
                 >
                   <span
                     style={{
@@ -859,37 +910,7 @@ export function ScheduleGrid({
           {colorTab === "picker" &&
             (() => {
               const hueColor = `hsl(${hue}, 100%, 50%)`;
-              const sat = pickerPos.x;
-              const val = 1 - pickerPos.y;
-              const c2 = val * sat;
-              const x2 = c2 * (1 - Math.abs(((hue / 60) % 2) - 1));
-              const m2 = val - c2;
-              let rr = 0;
-              let gg = 0;
-              let bb = 0;
-              if (hue < 60) {
-                rr = c2;
-                gg = x2;
-              } else if (hue < 120) {
-                rr = x2;
-                gg = c2;
-              } else if (hue < 180) {
-                gg = c2;
-                bb = x2;
-              } else if (hue < 240) {
-                gg = x2;
-                bb = c2;
-              } else if (hue < 300) {
-                rr = x2;
-                bb = c2;
-              } else {
-                rr = c2;
-                bb = x2;
-              }
-              const pr = Math.round((rr + m2) * 255);
-              const pg = Math.round((gg + m2) * 255);
-              const pb = Math.round((bb + m2) * 255);
-              const pickedHex = rgbToHex(pr, pg, pb);
+              const pickedHex = hsvSelectionToHex(hue, pickerPos);
 
               const handleGradientClick = (
                 e: React.MouseEvent<HTMLDivElement>,
@@ -904,6 +925,7 @@ export function ScheduleGrid({
                   Math.min(1, (e.clientY - rect.top) / rect.height),
                 );
                 setPickerPos({ x, y });
+                setPreviewColor(hsvSelectionToHex(hue, { x, y }));
               };
               const handleHueClick = (e: React.MouseEvent<HTMLDivElement>) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -911,7 +933,9 @@ export function ScheduleGrid({
                   0,
                   Math.min(1, (e.clientY - rect.top) / rect.height),
                 );
-                setHue(Math.round(y * 360));
+                const nextHue = Math.round(y * 360);
+                setHue(nextHue);
+                setPreviewColor(hsvSelectionToHex(nextHue, pickerPos));
               };
 
               return (
@@ -1052,15 +1076,15 @@ export function ScheduleGrid({
                     min="0"
                     max="255"
                     value={rgbInput[ch]}
-                    onChange={(e) =>
-                      setRgbInput((prev) => ({
-                        ...prev,
-                        [ch]: Math.max(
-                          0,
-                          Math.min(255, parseInt(e.target.value) || 0),
-                        ),
-                      }))
-                    }
+                    onChange={(e) => {
+                      const v = Math.max(
+                        0,
+                        Math.min(255, parseInt(e.target.value) || 0),
+                      );
+                      const next = { ...rgbInput, [ch]: v };
+                      setRgbInput(next);
+                      setPreviewColor(rgbToHex(next.r, next.g, next.b));
+                    }}
                     style={{
                       flex: 1,
                       backgroundColor: "var(--panel2)",
@@ -1173,6 +1197,49 @@ export function ScheduleGrid({
                     }}
                   >
                     ✏️ Write a Review
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleFavorite(course);
+                      setContextMenu(null);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      backgroundColor: "transparent",
+                      border: "1px solid var(--border)",
+                      borderRadius: "5px",
+                      color: "var(--text)",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {favoriteIds.has(course.id)
+                      ? "💔 Remove from Favorites"
+                      : "❤️ Add to Favorites"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleSchedule(course);
+                      setContextMenu(null);
+                      setPreviewColor(null);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "6px 8px",
+                      textAlign: "left",
+                      backgroundColor: "transparent",
+                      border: "1px solid #a32638",
+                      borderRadius: "5px",
+                      color: "#ff6b6b",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                    }}
+                  >
+                    🗑️ Remove from Schedule
                   </button>
                 </>
               );

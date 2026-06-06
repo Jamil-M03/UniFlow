@@ -518,6 +518,10 @@ export default function App() {
     () => new Set(scheduled.map((c) => c.id)),
     [scheduled],
   );
+  const favoriteIds = useMemo(
+    () => new Set(favorites.map((c) => c.id)),
+    [favorites],
+  );
   const selectedCrns = useMemo(() => scheduled.map((c) => c.crn), [scheduled]);
   const totalCredits = useMemo(
     () => scheduled.reduce((acc, c) => acc + (c.credits ?? 0), 0),
@@ -654,6 +658,9 @@ export default function App() {
             onSelectCourse={selectCourse}
             onHoverCourse={handleHoverCourse}
             onColorChange={handleColorChange}
+            onToggleFavorite={toggleFavorite}
+            onToggleSchedule={toggleSchedule}
+            favoriteIds={favoriteIds}
             semesterLabel={semesterLabel}
           />
         </div>
