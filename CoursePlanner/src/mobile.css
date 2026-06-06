@@ -2,7 +2,7 @@
    Uniflow — Mobile Responsive Styles
    
    SETUP (3 steps):
-   1. Copy this file to   CoursePlannerr/src/mobile.css
+   1. Copy this file to   CoursePlanner/src/mobile.css
    2. In main.tsx add:    import './mobile.css'
    3. Confirm index.html has in <head>:
       <meta name="viewport" content="width=device-width, initial-scale=1" />

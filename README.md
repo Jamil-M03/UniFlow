@@ -112,7 +112,7 @@ cd uniflow
 npm install
 
 # Install front-end deps
-cd CoursePlannerr
+cd CoursePlanner
 npm install
 cd ..
 ```
@@ -130,7 +130,7 @@ HF_TOKEN=...
 PORT=3001
 ```
 
-**`./CoursePlannerr/.env`** (front-end):
+**`./CoursePlanner/.env`** (front-end):
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
@@ -145,7 +145,7 @@ VITE_API_URL=http://localhost:3001
 node server.cjs
 
 # Terminal 2: frontend
-cd CoursePlannerr
+cd CoursePlanner
 npm run dev
 ```
 
@@ -167,10 +167,10 @@ Supabase. Expect 5–15 minutes depending on department count.
 ## Tests
 
 The schedule logic (free-slot finding and classroom availability) has
-unit tests under `CoursePlannerr/tests/`:
+unit tests under `CoursePlanner/tests/`:
 
 ```bash
-cd CoursePlannerr
+cd CoursePlanner
 npm test
 ```
 
@@ -185,7 +185,7 @@ uniflow/
 ├── courseFetcher_spring.cjs            spring-term scraper
 ├── courseFetcher_semester_based.cjs    semester-parametrized scraper
 ├── package.json                        root deps (Express, Playwright, Groq, HF)
-└── CoursePlannerr/                     React + TypeScript front-end
+└── CoursePlanner/                     React + TypeScript front-end
     ├── src/
     │   ├── pages/                      route-level views
     │   │   ├── AdminPortal.tsx         moderator queue (admin-only)
