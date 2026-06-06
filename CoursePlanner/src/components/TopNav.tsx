@@ -7,6 +7,25 @@ import { useAppUser } from "../hooks/useAppUser.ts";
 import { gradePointsMap, calculateGPA } from "../gpaCalculator";
 import type { Course } from "../types";
 
+// Theme preference persists across browser sessions (localStorage).
+const THEME_KEY = "uniflow:lightMode";
+
+function readLightMode(): boolean {
+  try {
+    return localStorage.getItem(THEME_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeLightMode(light: boolean) {
+  try {
+    localStorage.setItem(THEME_KEY, String(light));
+  } catch {
+    /* ignore storage failures (e.g. private mode) */
+  }
+}
+
 type Props = {
   appName: string;
   semesterLabel: string;
@@ -211,13 +230,15 @@ export function TopNav({
       { course: "", grade: "A+", credits: "" },
     ]);
 
-  const [lightMode, setLightMode] = useState(false);
-  const toggleTheme = () => {
-    setLightMode((prev) => {
-      document.body.classList.toggle("light", !prev);
-      return !prev;
-    });
-  };
+  const [lightMode, setLightMode] = useState(readLightMode);
+
+  // Apply the saved/selected theme to the page and remember it across sessions.
+  useEffect(() => {
+    document.body.classList.toggle("light", lightMode);
+    writeLightMode(lightMode);
+  }, [lightMode]);
+
+  const toggleTheme = () => setLightMode((prev) => !prev);
 
   const updateGradeRow = (id: number, field: string, val: string) =>
     setGradeRows((p) =>
