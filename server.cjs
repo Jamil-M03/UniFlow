@@ -745,8 +745,15 @@ app.get("/api/courses/search", async (req, res) => {
 app.post("/api/ai-schedule", async (req, res) => {
   const {
     message,
+    requestText,
     sections: rawSections = [],
+    existingSections: rawExisting = [],
     difficulties = {},
+    suggestionLimit,
+    matchedAttributes = [],
+    matchedDepartments = [],
+    matchedInstructors = [],
+    capacityRule,
     history = [],
   } = req.body ?? {};
 
@@ -755,6 +762,7 @@ app.post("/api/ai-schedule", async (req, res) => {
   }
 
   const sections = Array.isArray(rawSections) ? rawSections : [];
+  const existing = Array.isArray(rawExisting) ? rawExisting : [];
   const normalizedMessage = normalizeText(message);
   const reviewIntent = REVIEW_INTENT_KEYWORDS.some((keyword) =>
     normalizedMessage.includes(keyword),
@@ -793,41 +801,63 @@ app.post("/api/ai-schedule", async (req, res) => {
   }
 
   // Build sections context — only relevant sections passed from frontend
-  const sectionsText = sections.map(s => {
-    const meetings = s.meetings.map(m =>
-      `${m.days.join('/')} ${m.start}–${m.end}`
-    ).join(', ');
-    const diff = difficulties[s.code] ? `difficulty ${difficulties[s.code]}/5` : 'no reviews';
-    return `[${s.id}] ${s.code} | ${s.title} | Section ${s.section} | ${s.instructor} | ${meetings} | Credits: ${s.credits} | ${diff} | Seats: ${s.capacity.enrolled}/${s.capacity.limit}`;
-  }).join('\n');
+  const formatMeetings = (meetings) => {
+    const text = (meetings ?? [])
+      .map((m) => `${(m.days ?? []).join("/")} ${m.start}–${m.end}`)
+      .join(", ");
+    return text || "No fixed meeting time (online/async)";
+  };
 
-  const systemPrompt = `You are an AI academic advisor at the American University of Beirut (AUB). 
-Your job is to help students build their semester schedule.
+  const sectionsText = sections.map((s) => {
+    const diff = difficulties[s.code] ? `difficulty ${difficulties[s.code]}/5` : "no reviews";
+    const seats = s.capacityNote || `Seats: ${s.capacity?.enrolled ?? "?"}/${s.capacity?.limit ?? "?"}`;
+    const linked = s.isSectionLinked
+      ? ` | LINKED group ${s.linkIdentifier ?? "?"} (must be taken with its paired lecture/lab/recitation)`
+      : "";
+    const kind = s.scheduleType ? ` | ${s.scheduleType}` : "";
+    return `[${s.id}] ${s.code} | ${s.title} | Section ${s.section} | ${s.instructor} | ${formatMeetings(s.meetings)}${kind} | ${diff} | ${seats}${linked}`;
+  }).join("\n");
 
-You will be given a list of available course sections with their timings, difficulty ratings from student reviews, and seat availability.
-When the student asks you to build a schedule:
-1. Pick ONE section per requested course
-2. Make sure NO two selected sections have overlapping meeting times on the same day
-3. Respect preferences like "no Fridays", "prefer mornings" (08:00-12:00), "prefer afternoons" (12:00-17:00)
-4. Prefer sections with available seats
-5. Prefer lower difficulty sections if the student seems concerned about workload
+  // Already-scheduled courses the model must NOT conflict with or duplicate.
+  const existingText = existing.length
+    ? existing.map((s) => `${s.code} (Section ${s.section}) ${formatMeetings(s.meetings)}`).join("\n")
+    : "(none)";
 
-After picking the sections, respond in this EXACT JSON format and nothing else:
+  const hints = [
+    matchedAttributes.length ? `Matched attributes: ${matchedAttributes.join(", ")}.` : "",
+    matchedDepartments.length ? `Restricted to departments: ${matchedDepartments.join(", ")}.` : "",
+    matchedInstructors.length ? `Restricted to instructors: ${matchedInstructors.join(", ")}.` : "",
+    Number.isFinite(suggestionLimit) ? `Suggest at most ${suggestionLimit} course(s).` : "",
+  ].filter(Boolean).join(" ");
+
+  const systemPrompt = `You are an AI academic advisor at the American University of Beirut (AUB).
+Your job is to help students build their semester schedule from the sections provided.
+
+Hard rules:
+1. Pick sections ONLY from the [section_id] values in "Available sections". Never invent an id or a course that is not listed.
+2. Pick ONE section per requested course.
+3. No two picked sections may have overlapping meeting times on the same day.
+4. Picked sections must NOT conflict (same-day time overlap) with any course in "Already scheduled", and must not duplicate a course the student already has.
+5. If a picked section is part of a LINKED group, you must also pick its paired sections from the same linked group when they are present in the list.
+6. Respect preferences: "no Fridays" (exclude F), "prefer mornings" (08:00–12:00), "prefer afternoons" (12:00–17:00), "prefer evenings" (after 17:00).
+7. Prefer sections with open seats. Capacity meaning: ${capacityRule || "isFull=true means full; isFull=false means seats are open; enrolled=0 means the class is EMPTY, never treat it as full."}
+8. Prefer lower-difficulty sections when the student signals workload concern. If a requested course has no non-conflicting open section, leave it out and say why in the summary.
+${hints ? `\nRequest hints: ${hints}` : ""}
+
+When building a schedule, respond ONLY with JSON in this exact shape:
 {
-  "schedule": ["section_id_1", "section_id_2", ...],
-  "summary": "A friendly 2-3 sentence explanation of why you picked these sections, including the average difficulty estimate and any warnings.",
+  "schedule": ["section_id_1", "section_id_2"],
+  "summary": "A friendly 2-3 sentence explanation of the picks, the average difficulty, and any course you had to skip and why.",
   "avgDifficulty": 3.2
 }
 
-If the student is just chatting (not asking for a schedule), respond in this format:
-{
-  "schedule": null,
-  "summary": "your friendly response here",
-  "avgDifficulty": null
-}`;
+If the student is just chatting (not asking for a schedule), respond ONLY with JSON:
+{ "schedule": null, "summary": "your friendly response", "avgDifficulty": null }`;
+
+  const studentRequest = (typeof requestText === "string" && requestText.trim()) ? requestText.trim() : message;
 
   const userMessage = sections.length > 0
-    ? `Available sections:\n${sectionsText}\n\nStudent request: ${message}`
+    ? `Available sections:\n${sectionsText}\n\nAlready scheduled (avoid conflicts/duplicates):\n${existingText}\n\nStudent request: ${studentRequest}`
     : message;
 
   try {
@@ -843,19 +873,32 @@ If the student is just chatting (not asking for a schedule), respond in this for
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: chatMessages,
-      temperature: 0.4,
+      temperature: 0.3,
       max_tokens: 1000,
+      response_format: { type: 'json_object' },
     });
 
     const text = completion.choices[0]?.message?.content?.trim() ?? '';
 
-    // Parse JSON response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.json({ schedule: null, summary: text, avgDifficulty: null });
+    // response_format guarantees JSON, but parse defensively and fall back to
+    // extracting the first JSON object if anything unexpected comes back.
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return res.json({ schedule: null, summary: text, avgDifficulty: null });
+      }
+      parsed = JSON.parse(jsonMatch[0]);
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Drop any hallucinated ids that aren't in the sections we sent.
+    if (Array.isArray(parsed.schedule)) {
+      const validIds = new Set(sections.map((s) => s.id));
+      parsed.schedule = parsed.schedule.filter((id) => validIds.has(id));
+    }
+
     res.json(parsed);
   } catch (err) {
     console.error("Groq error:", err);

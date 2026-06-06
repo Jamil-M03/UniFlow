@@ -18,7 +18,26 @@ import { useAppUser } from "./hooks/useAppUser.ts";
 const API_URL = import.meta.env.VITE_API_URL || "";
 const COURSE_CACHE_PREFIX = "uniflow:courses:v2:";
 const TERMS_CACHE_KEY = "uniflow:terms";
+// Persisted across browser sessions (localStorage, not sessionStorage) so the
+// app reopens to whatever semester the user last had selected.
+const SELECTED_TERM_KEY = "uniflow:selectedTerm";
 const EMPTY_COURSES: Course[] = [];
+
+function readSelectedTerm(): string {
+  try {
+    return localStorage.getItem(SELECTED_TERM_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeSelectedTerm(code: string) {
+  try {
+    if (code) localStorage.setItem(SELECTED_TERM_KEY, code);
+  } catch {
+    /* ignore storage failures (e.g. private mode) */
+  }
+}
 
 function decodeHtmlEntities(str: string): string {
   return str
@@ -161,13 +180,20 @@ export default function App() {
   const [semesters, setSemesters] = useState<TermOption[]>(() =>
     formatTermOptions(initialTerms),
   );
-  const [semesterId, setSemesterId] = useState(
-    () => initialTerms.find((term) => term.is_current)?.code ?? "",
-  );
+  const [semesterId, setSemesterId] = useState(() => {
+    const saved = readSelectedTerm();
+    if (saved && initialTerms.some((term) => term.code === saved)) return saved;
+    return initialTerms.find((term) => term.is_current)?.code ?? saved;
+  });
   const semesterLabel = useMemo(
     () => semesters.find((s) => s.id === semesterId)?.label ?? "Semester",
     [semesterId, semesters],
   );
+
+  // Remember the last selected semester across sessions.
+  useEffect(() => {
+    writeSelectedTerm(semesterId);
+  }, [semesterId]);
 
   useEffect(() => {
     fetch(`${API_URL}/api/terms`)
@@ -175,8 +201,15 @@ export default function App() {
       .then((data: TermRecord[]) => {
         writeCachedJson(TERMS_CACHE_KEY, data);
         setSemesters(formatTermOptions(data));
-        const current = data.find((term) => term.is_current);
-        if (current) setSemesterId(current.code);
+        setSemesterId((prev) => {
+          // Keep the in-session selection if it's still a valid term.
+          if (prev && data.some((term) => term.code === prev)) return prev;
+          // Otherwise restore the last selection saved from a previous visit.
+          const saved = readSelectedTerm();
+          if (saved && data.some((term) => term.code === saved)) return saved;
+          // Fall back to the current term only when nothing else is valid.
+          return data.find((term) => term.is_current)?.code ?? prev;
+        });
       })
       .catch(() => setSemesters([]));
   }, []);
