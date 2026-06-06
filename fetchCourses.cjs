@@ -571,9 +571,11 @@ if (cliYear && (isNaN(cliYear) || cliYear < 2000 || cliYear > 2100)) {
 }
 
 // ─── Supabase client ───────────────────────────────────────────────────────────
+// Ingestion writes to courses/terms/professors -> service-role key (server-side
+// only; never ship to the frontend or commit it).
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
 // ─── Fetch target terms only ──────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
 import { useSupabase } from "../hooks/useSupabase.ts";
 import { useAppUser } from "../hooks/useAppUser.ts";
 
@@ -615,6 +616,7 @@ function SentimentPanel({ sentiment }: { sentiment: ReturnType<typeof getSentime
 
 export default function Reviews() {
   const supabase = useSupabase();
+  const { getToken } = useAuth();
   const { appUserId: userId, email, loading: authLoading } = useAppUser();
   const suppressProfSearch = useRef(false);
   const suppressCourseSearch = useRef(false);
@@ -902,11 +904,14 @@ export default function Reviews() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const token = await getToken();
       const res = await fetch(`${API}/api/ratings/course`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          user_id: userId,
           department: selectedCourse.department,
           course_number: selectedCourse.course_number,
           rating: formRating,
@@ -916,7 +921,8 @@ export default function Reviews() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        if (res.status === 409 || err?.code === "23505") setSubmitError("You've already rated this course.");
+        if (res.status === 401) setSubmitError("Your session expired. Please sign in again.");
+        else if (res.status === 409 || err?.code === "23505") setSubmitError("You've already rated this course.");
         else if (res.status === 400) setSubmitError("Your review contains inappropriate content and was not submitted.");
         else if (res.status === 503) setSubmitError("Review moderation is temporarily unavailable. Please try again later.");
         else setSubmitError("Something went wrong. Please try again.");
@@ -938,11 +944,14 @@ export default function Reviews() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const token = await getToken();
       const res = await fetch(`${API}/api/ratings/professor`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          user_id: userId,
           professor_id: selectedProf.id,
           department: formDept.toUpperCase(),
           course_number: formCourseNum,

@@ -11,8 +11,12 @@ const PAGE_SIZE = 500;
 //   1) Season + academic-year start (recommended):
 //        node courseFetcher_semester_based.cjs summer 2026
 //        node courseFetcher_semester_based.cjs 30 2026      (30 == summer)
-//      The year is the FALL year of the academic year, i.e. 2026 == "2026-2027".
-//      The 6-digit Banner code and the human label are built automatically.
+//      The <startYear> is the FALL (start) year of the academic year, i.e.
+//      2026 == academic year "2026-2027". NOTE: this is the start year, not the
+//      calendar year the classes run in — so `spring 2026` and `summer 2026`
+//      resolve to the 2026-2027 academic year (classes in calendar 2027), while
+//      `fall 2026` runs in calendar fall 2026. The 6-digit Banner code and the
+//      human label are built automatically.
 //
 //   2) Full 6-digit Banner code (still supported for backwards compatibility):
 //        node courseFetcher_semester_based.cjs 202730
@@ -22,8 +26,20 @@ const PAGE_SIZE = 500;
 //   3) Environment variables / nothing (falls back to the defaults below):
 //        TERM_CODE=202730 TERM_LABEL="Summer 2026-2027" node courseFetcher_semester_based.cjs
 //
-// Semester numbers (the last two digits of the Banner code):
+// Banner term code = <4-digit year><2-digit season>.
+//   The 4-digit year is the year the academic year ENDS (its spring/summer
+//   calendar year), NOT the fall calendar year.
+//   Semester numbers (the last two digits):
 //        Fall = 10        Spring = 20        Summer = 30
+//
+//   Worked decode table (verified against AUB Banner's term dropdown):
+//        202610 -> Fall   2025-2026   (classes Sep 2025)
+//        202620 -> Spring 2025-2026   (classes spring 2026)
+//        202630 -> Summer 2025-2026   (classes summer 2026)
+//        202710 -> Fall   2026-2027   (classes Sep 2026)
+//        202530 -> Summer 2024-2025   (classes summer 2025)
+//   So a Fall term's code year is one AHEAD of its fall calendar year
+//   (Fall 2025 lives under 2026 because that academic year ends in 2026).
 //
 // Flags:
 //   --not-current   Save the term WITHOUT marking it as the app's current/default
@@ -127,9 +143,11 @@ const positionalArgs = rawArgs.filter((arg) => !arg.startsWith('--'));
 
 const { code: TERM_CODE, label: TERM_LABEL } = resolveTerm(positionalArgs);
 
+// Ingestion writes to courses/terms/professors, so it uses the service-role
+// key (server-side only — keep it out of the frontend and out of git).
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
 async function saveTermToDB() {

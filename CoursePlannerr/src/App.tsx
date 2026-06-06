@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { AIScheduler } from "./components/AiScheduler.tsx";
 import AdminRoute from "./components/AdminRoute";
 import { mapApiCoursesToCourses } from "./utils/courseApi.ts";
+import { resolveRegisteredCourses } from "./utils/registeredCourses.ts";
 import { useSupabase } from "./hooks/useSupabase.ts";
 import { useAppUser } from "./hooks/useAppUser.ts";
 
@@ -255,8 +256,18 @@ export default function App() {
       const loaded: Record<number, Course[]> = { 1: [], 2: [], 3: [] };
       const loadedColors = new Map<string, string>();
 
+      // Only treat the catalog as authoritative once it has actually loaded;
+      // while it's still empty we keep snapshots so the slots don't flash empty.
+      const catalogReady = allCourses.length > 0;
+
       (rows ?? []).forEach((row) => {
-        loaded[row.slot] = (row.courses ?? []).map(sanitizeCourse);
+        // Re-resolve registered courses against the live catalog: live data when
+        // still offered, dropped when no longer offered, snapshot while loading.
+        loaded[row.slot] = resolveRegisteredCourses(
+          row.courses ?? [],
+          allCourses,
+          catalogReady,
+        ).map(sanitizeCourse);
         if (row.colors) {
           Object.entries(row.colors).forEach(([id, color]) => {
             loadedColors.set(id, color);
@@ -281,7 +292,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [supabase, userId, semesterId, appUserLoading]);
+  }, [supabase, userId, semesterId, appUserLoading, allCourses]);
 
   // Load favorites — wait for allCourses to be ready before resolving course objects
   useEffect(() => {
